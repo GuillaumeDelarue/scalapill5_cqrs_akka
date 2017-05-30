@@ -15,7 +15,7 @@ class Sample2_EventSourcingCounterSpec extends TestKit(ActorSystem("EventSourcin
   "An event-sourcing counter actor" should {
 
     "increment its value and report result when asked" in {
-      val counter = system.actorOf(Props(new EventSourcingCounter("001"))) // not recommended! Could break encapsulation when closing over enclosing class
+      val counter = system.actorOf(Props(new EventSourcingCounter("001")))
 
       assertResultOfReportCommandIs(counter, 0)
       counter ! Increment

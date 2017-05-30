@@ -3,10 +3,10 @@ package scalapills.cqrs.samples
 import akka.actor.ActorLogging
 import akka.persistence.{PersistentActor, SnapshotOffer}
 
-import scalapills.cqrs.domain.{CountIncrementRequested, Increment, Report, Result}
+import scalapills.cqrs.domain._
 
 class CounterWithSnapshots(override val persistenceId: String) extends PersistentActor with ActorLogging {
-  private val snapShotInterval = 1000
+  private val snapShotInterval = 100
   private var count = 0
 
   // Command handler
@@ -15,14 +15,17 @@ class CounterWithSnapshots(override val persistenceId: String) extends Persisten
       persist(CountIncrementRequested(count)) { event =>
         handle(event)
         context.system.eventStream.publish(event)
-        if (lastSequenceNr % snapShotInterval == 0 && lastSequenceNr != 0) saveSnapshot(count)
+        if (lastSequenceNr % snapShotInterval == 0 && lastSequenceNr != 0) {
+          saveSnapshot(count)
+          sender ! SnapshotSaved(persistenceId, count)
+        }
       }
 
     case Report =>
       log.info(s"Current count: $count")
       sender ! Result(count)
 
-    case _ => log.error("Received unknown command")
+    case c => log.error(s"Received unknown command $c")
   }
 
   // Restarting from events replay
