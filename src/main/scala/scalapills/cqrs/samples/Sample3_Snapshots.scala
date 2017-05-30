@@ -17,7 +17,7 @@ class CounterWithSnapshots(override val persistenceId: String) extends Persisten
         context.system.eventStream.publish(event)
         if (lastSequenceNr % snapShotInterval == 0 && lastSequenceNr != 0) {
           saveSnapshot(count)
-          sender ! SnapshotSaved(persistenceId, count)
+          log.info(s"Snapshot saved: $count")
         }
       }
 
@@ -31,7 +31,9 @@ class CounterWithSnapshots(override val persistenceId: String) extends Persisten
   // Restarting from events replay
   override def receiveRecover: Receive = {
     case event: CountIncrementRequested => handle(event)
-    case SnapshotOffer(_, snapshot: Int) => count = snapshot
+    case SnapshotOffer(_, snapshot: Int) =>
+      count = snapshot
+      log.info(s"Restored from snapshot: $count")
     case _ => // ignore everything else
   }
 

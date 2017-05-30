@@ -1,10 +1,10 @@
 package scalapills.cqrs.samples
 
-import akka.actor.{ActorSystem, Props}
-import akka.testkit.{ImplicitSender, TestKit}
+import akka.actor.{ActorSystem, PoisonPill, Props}
+import akka.testkit.{EventFilter, ImplicitSender, TestKit}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
-import scalapills.cqrs.domain.{Increment, SnapshotSaved}
+import scalapills.cqrs.domain._
 
 class Sample3_CounterWithSnapshotsSpec extends TestKit(ActorSystem("CounterWithSnapshotsSpec")) with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll {
 
@@ -14,15 +14,20 @@ class Sample3_CounterWithSnapshotsSpec extends TestKit(ActorSystem("CounterWithS
 
   "An event-sourcing counter with snapshot actor" should {
 
-    "save snapshot every 100 messages received" in {
-      val counter = system.actorOf(Props(new CounterWithSnapshots("001")))
+    "save snapshot every 100 messages received, and is restored from snapshot" in {
+      val counter = system.actorOf(Props(new CounterWithSnapshots("003")))
 
       (1 to 99).foreach(_ => counter ! Increment)
-      expectNoMsg()
 
-      counter ! Increment
+      EventFilter.info(message = s"Snapshot saved: 100", occurrences = 1) intercept {
+        counter ! Increment
+      }
 
-      expectMsg(SnapshotSaved("001", 100))
+      counter ! PoisonPill // kills the actor
+
+      EventFilter.info(message = s"Restored from snapshot: 100", occurrences = 1) intercept {
+        system.actorOf(Props(new CounterWithSnapshots("003")))
+      }
     }
   }
 }
