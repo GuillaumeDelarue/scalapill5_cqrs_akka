@@ -5,8 +5,10 @@ import akka.testkit.{EventFilter, ImplicitSender, TestKit}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
 import scalapills.cqrs.domain._
+import scalapills.cqrs.samples.CounterWithSnapshots.SnapshotInterval
 
 class Sample3_CounterWithSnapshotsSpec extends TestKit(ActorSystem("CounterWithSnapshotsSpec")) with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll {
+  private val justBeforeSnapshotTrigger = SnapshotInterval - 1
 
   override protected def afterAll() {
     TestKit.shutdownActorSystem(system)
@@ -14,19 +16,28 @@ class Sample3_CounterWithSnapshotsSpec extends TestKit(ActorSystem("CounterWithS
 
   "An event-sourcing counter with snapshot actor" should {
 
-    "save snapshot every 100 messages received, and is restored from snapshot" in {
+    "not save any snapshot before the threshold of messages is reached" in {
       val counter = system.actorOf(Props(new CounterWithSnapshots("003")))
 
-      (1 to 99).foreach(_ => counter ! Increment)
+      an[AssertionError] shouldBe thrownBy {
+        EventFilter.info(pattern = "Snapshot saved: \\d+", occurrences = 1) intercept {
+          (1 to justBeforeSnapshotTrigger).foreach(_ => counter ! Increment)
+        }
+      }
+    }
 
-      EventFilter.info(message = s"Snapshot saved: 100", occurrences = 1) intercept {
+    "save snapshot when pre-defined number of messages is reached, and be restored from snapshot when restarted" in {
+      val counter = system.actorOf(Props(new CounterWithSnapshots("004")))
+
+      (1 to justBeforeSnapshotTrigger).foreach(_ => counter ! Increment)
+      EventFilter.info(message = s"Snapshot saved: $SnapshotInterval", occurrences = 1) intercept {
         counter ! Increment
       }
 
       counter ! PoisonPill // kills the actor
 
-      EventFilter.info(message = s"Restored from snapshot: 100", occurrences = 1) intercept {
-        system.actorOf(Props(new CounterWithSnapshots("003")))
+      EventFilter.info(message = s"Restored from snapshot: $SnapshotInterval", occurrences = 1) intercept {
+        system.actorOf(Props(new CounterWithSnapshots("004")))
       }
     }
   }

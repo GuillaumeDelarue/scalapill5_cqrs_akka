@@ -4,9 +4,13 @@ import akka.actor.ActorLogging
 import akka.persistence.{PersistentActor, SnapshotOffer}
 
 import scalapills.cqrs.domain._
+import scalapills.cqrs.samples.CounterWithSnapshots.SnapshotInterval
+
+object CounterWithSnapshots {
+  val SnapshotInterval = 100
+}
 
 class CounterWithSnapshots(override val persistenceId: String) extends PersistentActor with ActorLogging {
-  private val snapShotInterval = 100
   private var count = 0
 
   // Command handler
@@ -15,7 +19,7 @@ class CounterWithSnapshots(override val persistenceId: String) extends Persisten
       persist(CountIncrementRequested(count)) { event =>
         handle(event)
         context.system.eventStream.publish(event)
-        if (lastSequenceNr % snapShotInterval == 0 && lastSequenceNr != 0) {
+        if (lastSequenceNr % SnapshotInterval == 0 && lastSequenceNr != 0) {
           saveSnapshot(count)
           log.info(s"Snapshot saved: $count")
         }
