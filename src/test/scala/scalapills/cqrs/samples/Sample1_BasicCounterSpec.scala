@@ -3,6 +3,7 @@ package scalapills.cqrs.samples
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{EventFilter, ImplicitSender, TestKit}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import scala.concurrent.duration._
 
 import scalapills.cqrs.domain.{Increment, Report, Result}
 
@@ -28,6 +29,18 @@ class Sample1_BasicCounterSpec extends TestKit(ActorSystem("BasicActorSpec")) wi
 
       EventFilter.error(message = s"Received unknown message: [$invalidMessage]", occurrences = 1) intercept {
         counter ! invalidMessage
+      }
+    }
+
+    "performance testing" in {
+      val counter = system.actorOf(Props[BasicCounter])
+
+      within(100 millis) {
+        counter ! Increment
+
+        counter ! Report
+        expectMsg(Result(1))
+        expectNoMsg() // blocks for the rest of the 100 millis
       }
     }
   }
