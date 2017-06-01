@@ -1,6 +1,6 @@
 package scalapills.cqrs.samples
 
-import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{EventFilter, ImplicitSender, TestKit}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 

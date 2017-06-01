@@ -13,7 +13,7 @@ class EventSourcingCounter(override val persistenceId: String) extends Persisten
     case Increment =>
       persist(CountIncrementRequested(count)) { event =>
         handle(event)
-        context.system.eventStream.publish(event)
+        context.system.eventStream.publish(event) // default event-bus publishing for pub/sub
       }
 
     case Report =>
